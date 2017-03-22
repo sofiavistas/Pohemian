@@ -1,7 +1,7 @@
 from flask import (Flask, g, render_template, flash,
                    redirect, url_for, abort)
 from flask_bcrypt import check_password_hash
-from flask_login import (LoginManager, login_user,logout_user,
+from flask_login import (LoginManager, login_user, logout_user,
                          login_required, current_user)
 
 import forms
@@ -32,6 +32,7 @@ def before_request():
     """Connect to the database before each request."""
     g.db = models.DATABASE
     g.db.connect()
+    g.user = current_user
 
 
 @app.after_request
@@ -86,7 +87,7 @@ def logout():
 def post():
     form = forms.PostForm()
     if form.validate_on_submit():
-        models.Post.create(user=g.user._get_current_object(),
+        models.Post.create(user=g.user.id,
                            content=form.content.data.strip())
         flash("Message posted!Thanks!", "success")
         return redirect(url_for('index'))
@@ -103,9 +104,14 @@ def index():
 @app.route('/stream/<username>')
 def stream(username=None):
     template = 'stream.html'
-    if username and username != current_user.username:
+    if current_user.is_authenticated:
+        cur_usr_name = current_user.username
+    else:
+        cur_usr_name = "this is a dummy"
+    if username and username != cur_usr_name:
         try:
-            user = models.User.select().where(models.User.username**username).get()
+            user = models.User.select().where(
+                models.User.username**username).get()
         except models.DoesNotExist:
             abort(404)
         else:
@@ -168,15 +174,15 @@ def unfollow(username):
 
 @app.errorhandler(404)
 def not_found(error):
-    render_template('404.html'), 400
+    return render_template('404.html'), 404
 
 if __name__ == '__main__':
     models.initialize()
     try:
         models.User.create_user(
-            username='kennethlove',
-            email='kenneth@teamtreehouse.com',
-            password='password',
+            username='sofiavistas',
+            email='sofiavistas@mailinator.com',
+            password='12345678',
             admin=True
         )
     except ValueError:
